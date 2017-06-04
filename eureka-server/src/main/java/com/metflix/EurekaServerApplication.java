@@ -17,6 +17,7 @@ import org.springframework.cloud.netflix.eureka.server.EnableEurekaServer;
  *     recommendation.api=http://recommendations
  * 動作確認
  *  http://localhost:8761 にアクセス
+ *  指定した名前で、各サービスのエンドポイントが登録され、かつ、インスタンス（複数でも可）の稼働を監視しているのがわかる。
  *  
  * 以下は、演習のため。ConfigServerのレポジトリを切り替えるために設定
  * 3. bootstrap.properties編集
