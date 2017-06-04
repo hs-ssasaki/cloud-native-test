@@ -2,12 +2,14 @@ package com.metflix;
 
 import java.net.URI;
 import java.security.Principal;
+import java.util.Collections;
 import java.util.List;
 import org.apache.catalina.filters.RequestDumperFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.circuitbreaker.EnableCircuitBreaker;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
@@ -29,6 +31,9 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixProperty;
 
 /*
  * pom.xmlに、spring-boot-starter-security を追加した時点で、
@@ -53,6 +58,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 // Spring SecurityのJavaConfigを兼ねるため、WebSecurityConfigurerAdapterを継承させる
 @SpringBootApplication
 @EnableDiscoveryClient
+@EnableCircuitBreaker
 public class UiApplication extends WebSecurityConfigurerAdapter {
 
 	public static void main(String[] args) {
@@ -89,7 +95,7 @@ public class UiApplication extends WebSecurityConfigurerAdapter {
 	protected void configure(HttpSecurity http) throws Exception {
 		http.httpBasic().and()
 			.csrf().ignoringAntMatchers("/env**", "/refresh**").and()
-			.authorizeRequests().antMatchers("/env**", "/refresh**").permitAll()
+			.authorizeRequests().antMatchers("/env**", "/refresh**", "/hystrix**").permitAll()
 			.antMatchers("**").authenticated().and()
 			.addFilterBefore(new RequestDumperFilter(), ChannelProcessingFilter.class);
 	}
@@ -129,7 +135,7 @@ class Movie {
 @RefreshScope
 class HomeController {
 	@Autowired
-	RestTemplate restTemplate;
+	RecommendationService recommendationService;
 	@Value("${recommendation.api:http://localhost:3333}")
 	URI recommendationApi;
 	@Value("${message:Welcome to metflix}")
@@ -137,15 +143,34 @@ class HomeController {
 	
 	@GetMapping("/")
 	public String home(Principal principal, Model model) {
-        List<Movie> recommendations = restTemplate.exchange(RequestEntity.get(UriComponentsBuilder.fromUri(recommendationApi)
-                .pathSegment("api", "recommendations", principal.getName())
-                .build().toUri()).build(), new ParameterizedTypeReference<List<Movie>>() {
-        }).getBody();
+		List<Movie> recommendations = recommendationService.getRecommendations(principal.getName());
         model.addAttribute("message", message);
         model.addAttribute("username", principal.getName());
         model.addAttribute("recommendations", recommendations);
         return "index";		
 	}
+}
+
+@Component
+class RecommendationService {
+    @Autowired
+    RestTemplate restTemplate;
+    @Value("${recommendation.api:http://localhost:3333}")
+    URI recommendationApi;
+
+    @HystrixCommand(fallbackMethod = "getRecommendationsFallback",
+            commandProperties = @HystrixProperty(name = "execution.isolation.thread.timeoutInMilliseconds", value = "5000"))
+    public List<Movie> getRecommendations(String username) {
+        return restTemplate.exchange(RequestEntity.get(UriComponentsBuilder.fromUri(recommendationApi)
+                .pathSegment("api", "recommendations", username)
+                .build().toUri()).build(), new ParameterizedTypeReference<List<Movie>>() {
+        }).getBody();
+    }
+
+    @SuppressWarnings("unused")
+	private List<Movie> getRecommendationsFallback(String username) {
+        return Collections.emptyList();
+    }	
 }
 
 // membershipサービスに登録されているかどうかを認証処理とするため、自前のUserDetailsServiceインターフェースの実装クラスを作成する

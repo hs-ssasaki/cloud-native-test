@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.circuitbreaker.EnableCircuitBreaker;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;
@@ -20,8 +21,24 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixProperty;
+
+/*
+ * CircuitBreakerの導入
+ * APIをコールするクライアント側に導入する。
+ * 
+ * 1. pom.xml編集
+ * 2. @EnableCircuitBreakerを付与
+ * 3. 外部のRest apiをコールするメソッドに、@HystrixCommanを付与
+ *  - fallbackMethod エラー時に分岐させるフォールバックメソッドを指定
+ *  - ignoreException エラー判定を無視する例外を指定
+ *  - commandProperties
+ * 4. フォールバックメソッドを定義
+ */
 @SpringBootApplication
 @EnableDiscoveryClient
+@EnableCircuitBreaker
 public class RecommendationsApplication {
 
 	public static void main(String[] args) {
@@ -53,10 +70,13 @@ class RecommendationsController {
 
 	@Value("${member.api:http://localhost:4444}")
 	URI memberApi;
-	
+
+
+	@HystrixCommand(fallbackMethod="recommendationFallback",
+			ignoreExceptions=UserNotFoundException.class,
+			commandProperties=@HystrixProperty(name = "execution.isolation.thread.timeoutInMilliseconds", value="5000"))
 	@GetMapping("/{user}")
 	public List<Movie> findRecommendationsForUser(@PathVariable String user) throws UserNotFoundException {
-		
 		/*
 		 * RestTemplateクライアントから、membershipのREST APIをたたいて、memberオブジェクトを取得する。
 		 * RestTemplete#exchange()で、Rest apiをたたく
@@ -72,7 +92,13 @@ class RecommendationsController {
 		
 		return member.age < 17 ? kidsRecommendations : adultRecommendations ;
 	}
-
+	
+    /**
+     * Should be safe for all audiences
+     */
+    List<Movie> recommendationFallback(String user) {
+        return familyRecommendations;
+    }
 }
 
 class Movie {
