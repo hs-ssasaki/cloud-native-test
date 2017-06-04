@@ -6,6 +6,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.catalina.filters.RequestDumperFilter;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @SpringBootApplication
+@EnableDiscoveryClient
 public class MembershipApplication {
 
 	public static void main(String[] args) {
@@ -49,6 +51,7 @@ class MembershipController {
 		{
 			put("yamada", new Member("yamada", 10));
 			put("sato", new Member("sato", 30));
+			put("ryoma", new Member("ryoma", 9));
 		}
 	};
 	

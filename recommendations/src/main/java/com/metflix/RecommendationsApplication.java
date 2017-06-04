@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.RequestEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,6 +21,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @SpringBootApplication
+@EnableDiscoveryClient
 public class RecommendationsApplication {
 
 	public static void main(String[] args) {
@@ -26,6 +29,7 @@ public class RecommendationsApplication {
 	}
 	
 	@Bean
+	@LoadBalanced
 	RestTemplate restTemplate() {
 		return new RestTemplate();
 	}
@@ -43,7 +47,7 @@ class RecommendationsController {
 	List<Movie> kidsRecommendations = Arrays.asList(new Movie("Lion king"), new Movie("Totoro"));
 	List<Movie> adultRecommendations = Arrays.asList(new Movie("shown"), new Movie("spring"));
 	List<Movie> familyRecommendations = Arrays.asList(new Movie("hook"), new Movie("the sandlot"));
-	
+
 	@Autowired
 	RestTemplate restTemplate;
 
