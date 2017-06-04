@@ -15,13 +15,14 @@ import org.springframework.cloud.config.server.EnableConfigServer;
  * 3. applications.properties設定(spring.cloud.config.server.git.uri)
  * 
  * 他マイクロサービス設定
- * 1. pom.xmlに追加
+ * 1. pom.xmlに追加。
+ * 　　spring-cloudのバージョン情報は以下。 http://projects.spring.io/spring-cloud/
  *	<dependencyManagement>
 		<dependencies>
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
 				<artifactId>spring-cloud-dependencies</artifactId>
-				<version>Brixton.SR1</version>
+				<version>Dalston.SR1</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
